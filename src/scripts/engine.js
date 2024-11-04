@@ -17,7 +17,7 @@ const state = {
     player1: "player-cards",
     player1BOX: document.querySelector("#player-cards"),
     computer: "computer-cards",
-    computerBOX: document.querySelector("#computer-cards"), // Corrigido para o elemento correto
+    computerBOX: document.querySelector("#computer-cards"),
   },
   actions: {
     button: document.getElementById("next-duel"),
@@ -84,7 +84,7 @@ async function createCardImage(IdCard, fieldSide) {
 }
 
 async function setCardsField(cardId) {
-  await removeAllCardsImages(); // Remove todas as cartas antes
+  await removeAllCardsImages();
 
   let computerCardId = await getRandomCardId();
 
@@ -186,11 +186,33 @@ async function resetDuel(params) {
 }
 
 async function playAudio(status) {
-  const audio = new Audio(`./src/assets/audios/${status}.wav`);
+  if (status === "Draw") {
+    const audioContext = new (window.AudioContext ||
+      window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
 
-  try {
-    audio.play();
-  } catch {}
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    oscillator.type = "square";
+    oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+
+    oscillator.start();
+    setTimeout(() => {
+      oscillator.stop();
+      audioContext.close();
+    }, 300);
+  } else {
+    // toca os outros sons para "win" e "lose"
+    const audio = new Audio(`./src/assets/audios/${status}.wav`);
+    try {
+      await audio.play();
+    } catch (error) {
+      console.error("Erro ao tentar reproduzir o áudio:", error);
+    }
+  }
 }
 
 function init() {
@@ -199,9 +221,13 @@ function init() {
   drawCards(5, state.playerSides.player1);
   drawCards(5, state.playerSides.computer);
 
-  //obriga o audio a tocar
+  // Obriga o áudio de fundo a tocar
   const bgm = document.getElementById("bgm");
-  bgm.play();
+  if (bgm) {
+    bgm.play().catch((error) => {
+      console.error("Erro ao tentar reproduzir o áudio de fundo:", error);
+    });
+  }
 }
 
 init();
